@@ -9,16 +9,19 @@
 import UIKit
 
 class ArticleTableViewController: UITableViewController {
-    fileprivate var articles: [Article]?
+    fileprivate var articles: [Article]? = []
     fileprivate let identifer = "ArticleCell"
+    fileprivate var serverData: Array<Dictionary<String, Any>> = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        articles = [
-            Article(id: 1, title: "First article", description: "First description", created_at: "2018-05-12", updated_at: "2018-05-12", user_id: 3),
-            Article(id: 2, title: "2 article", description: "2 description", created_at: "2018-05-14", updated_at: "2018-05-15", user_id: 3),
-            Article(id: 3, title: "3 article", description: "3 description", created_at: "2018-05-17", updated_at: "2018-05-17", user_id: 3)
-        ]
+
+        self.title = "Articles"
+        if ((articles?.count)! < 1) {
+            getArticlesFromServer()
+        }
+        
+        
         // Uncomment the following line to preserve selection between presentations
         // self.clearsSelectionOnViewWillAppear = false
 
@@ -51,8 +54,8 @@ class ArticleTableViewController: UITableViewController {
         guard let articles = articles else { return cell }
         
         cell.articleNameLabel?.text = articles[(indexPath as NSIndexPath).row].title
-        cell.articleShortVersionLabel?.text = articles[(indexPath as NSIndexPath).row].description
-        cell.dateLabel?.text = articles[(indexPath as NSIndexPath).row].created_at
+        cell.articleShortVersionLabel?.text = getShort(dateString: articles[(indexPath as NSIndexPath).row].description!, symbols: 22)
+        cell.dateLabel?.text = getShort(dateString: articles[(indexPath as NSIndexPath).row].created_at!, symbols: 9)
         return cell
     }
  
@@ -106,16 +109,55 @@ class ArticleTableViewController: UITableViewController {
         }
     }
 
+    func getShort(dateString: String, symbols: Int)-> String {
+        if symbols < dateString.count{
+            let firstPart = dateString.index(dateString.startIndex, offsetBy: symbols)
+            return String(dateString[...firstPart])
+        } else {
+            return dateString
+        }
+    }
+    
     func getArticlesFromServer() {
-        /*
-        let URL = "https://   /articles.json"
+        
+        var getURL = URL(string: "https://alpha-blog-serhio.herokuapp.com/articles.json")!
+        var getRequest = URLRequest(url: getURL, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30.0)
+        getRequest.httpMethod = "GET"
+        getRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        getRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        URLSession.shared.dataTask(with: getRequest, completionHandler: { (data, response, error) -> Void in
+            if error != nil { print("GET Request: Communication error: \(error!)") }
+            if data != nil {
+                do {
+                    let resultObject = try JSONSerialization.jsonObject(with: data!, options: []) as! [[String:Any]]
+                    DispatchQueue.main.async(execute: {
+                        print("Results from GET https://httpbin.org/get?bar=foo :\n\(resultObject)")
+                        self.serverData = resultObject
+ 
+                        for articleJSON in self.serverData {
+                            let artricle: Article = Article(id: (articleJSON["id"] as? Int)!, title: (articleJSON["title"] as? String)!, description: (articleJSON["description"] as? String)!, created_at: (articleJSON["created_at"] as? String)!, updated_at: (articleJSON["updated_at"] as? String)!, user_id: (articleJSON["user_id"] as? Int)!)
+                            self.articles?.append(artricle)
+                            print(self.articles?.description ?? "")
+                        }
+                        self.tableView.reloadData()
+                    })
 
-        DispatchQueue.main.async{
-                    
-            self.articles =
+                } catch {
+                    DispatchQueue.main.async(execute: {
+                        print("Unable to parse JSON response")
+                    })
+                }
+            } else {
+                DispatchQueue.main.async(execute: {
+                    print("Received empty response.")
+                })
+            }
+        }).resume()
+        
+        DispatchQueue.main.async {
             self.tableView.reloadData()
         }
-        */
     }
 }
 

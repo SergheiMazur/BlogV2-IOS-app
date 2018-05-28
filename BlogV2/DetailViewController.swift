@@ -17,6 +17,7 @@ class DetailViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.title = "Article"
         
         articleTitleLabel.text = setLabel(articleText: article?.title)
         articleBodyTextView.text = setLabel(articleText: article?.description)
