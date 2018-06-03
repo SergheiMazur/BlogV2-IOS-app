@@ -12,13 +12,15 @@ class ArticleTableViewController: UITableViewController {
     fileprivate var articles: [Article]? = []
     fileprivate let identifer = "ArticleCell"
     fileprivate var serverData: Array<Dictionary<String, Any>> = []
+    var endListArticles : Bool = false
+    var pageID = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
         self.title = "Articles"
         if ((articles?.count)! < 1) {
-            getArticlesFromServer()
+            getNewPage()
         }
         
         
@@ -56,6 +58,9 @@ class ArticleTableViewController: UITableViewController {
         cell.articleNameLabel?.text = articles[(indexPath as NSIndexPath).row].title
         cell.articleShortVersionLabel?.text = getShort(dateString: articles[(indexPath as NSIndexPath).row].description!, symbols: 22)
         cell.dateLabel?.text = getShort(dateString: articles[(indexPath as NSIndexPath).row].created_at!, symbols: 9)
+        if !endListArticles && (articles[articles.count - 1] === articles[(indexPath as NSIndexPath).row]) {
+            getNewPage()
+        }
         return cell
     }
  
@@ -108,6 +113,11 @@ class ArticleTableViewController: UITableViewController {
             }
         }
     }
+    
+    func getNewPage() {
+        pageID += 1
+        getArticlesFromServer(pageNumber: pageID)
+    }
 
     func getShort(dateString: String, symbols: Int)-> String {
         if symbols < dateString.count{
@@ -118,9 +128,9 @@ class ArticleTableViewController: UITableViewController {
         }
     }
     
-    func getArticlesFromServer() {
+    func getArticlesFromServer(pageNumber: Int) {
         
-        var getURL = URL(string: "https://alpha-blog-serhio.herokuapp.com/articles.json")!
+        var getURL = URL(string: "https://alpha-blog-serhio.herokuapp.com/articles.json?page=\(pageNumber)")!
         var getRequest = URLRequest(url: getURL, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 30.0)
         getRequest.httpMethod = "GET"
         getRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -132,14 +142,15 @@ class ArticleTableViewController: UITableViewController {
                 do {
                     let resultObject = try JSONSerialization.jsonObject(with: data!, options: []) as! [[String:Any]]
                     DispatchQueue.main.async(execute: {
-                        print("Results from GET https://httpbin.org/get?bar=foo :\n\(resultObject)")
                         self.serverData = resultObject
- 
+                        if self.serverData.count < 5 {
+                            self.endListArticles = true
+                        }
                         for articleJSON in self.serverData {
                             let artricle: Article = Article(id: (articleJSON["id"] as? Int)!, title: (articleJSON["title"] as? String)!, description: (articleJSON["description"] as? String)!, created_at: (articleJSON["created_at"] as? String)!, updated_at: (articleJSON["updated_at"] as? String)!, user_id: (articleJSON["user_id"] as? Int)!)
                             self.articles?.append(artricle)
-                            print(self.articles?.description ?? "")
                         }
+                        print("Download page number \(self.pageID)")
                         self.tableView.reloadData()
                     })
 
@@ -155,9 +166,6 @@ class ArticleTableViewController: UITableViewController {
             }
         }).resume()
         
-        DispatchQueue.main.async {
-            self.tableView.reloadData()
-        }
     }
 }
 
